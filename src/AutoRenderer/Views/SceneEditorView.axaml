@@ -1,0 +1,283 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AutoRenderer.ViewModels"
+             xmlns:models="using:AutoRenderer.Core.Models"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="600"
+             x:Class="AutoRenderer.Views.SceneEditorView"
+             x:DataType="vm:SceneEditorViewModel"
+             DragDrop.AllowDrop="True">
+
+    <UserControl.Resources>
+        <!-- Simple Converter for Icons (Ideally should be a class but using inline XAML logic for simplicity/speed) -->
+        <x:Double x:Key="ZeroDouble">0</x:Double>
+    </UserControl.Resources>
+
+    <Grid ColumnDefinitions="250, *, 300">
+        <!-- Left: Scene Tree -->
+        <Border Grid.Column="0" BorderBrush="#333" BorderThickness="0,0,1,0" Padding="10">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10" Spacing="5">
+                    <TextBlock Text="Scene Graph" FontWeight="Bold" Margin="0,0,0,5"/>
+                    <Button Content="Import Model" Command="{Binding ImportModelCommand}" HorizontalAlignment="Stretch"/>
+                    <Button Content="Add Light" Command="{Binding AddLightCommand}" HorizontalAlignment="Stretch"/>
+                    <Button Content="⚙️ Scene Settings" Command="{Binding EditWorldSettingsCommand}" HorizontalAlignment="Stretch"/>
+                </StackPanel>
+                
+                <ListBox ItemsSource="{Binding SceneObjects}" SelectedItem="{Binding SelectedObject}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <ContentControl Content="{Binding}">
+                                <ContentControl.DataTemplates>
+                                    
+                                    <!-- Light Object Template -->
+                                    <DataTemplate DataType="models:LightObject">
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <TextBlock Text="💡" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                    
+                                    <!-- Generic Scene Object (Model) Template -->
+                                    <DataTemplate DataType="models:SceneObject">
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <TextBlock Text="📦" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                    
+                                </ContentControl.DataTemplates>
+                            </ContentControl>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- Center: Viewport & Console -->
+        <Grid Grid.Column="1" RowDefinitions="*">
+            <Border Background="#1E1E1E">
+                <Grid>
+                    <!-- Preview Image -->
+                    <Image Source="{Binding PreviewImage}" 
+                           Stretch="Uniform" 
+                           IsVisible="{Binding PreviewImage, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    
+                    <!-- Loading Indicator -->
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10" 
+                                IsVisible="{Binding IsLoadingPreview}">
+                        <ProgressBar IsIndeterminate="True"/>
+                        <TextBlock Text="Rendering Preview..." Foreground="#AAA"/>
+                    </StackPanel>
+
+                    <!-- Error Message -->
+                    <TextBlock Text="{Binding PreviewStatusMessage}" 
+                               Foreground="Red" 
+                               HorizontalAlignment="Center" 
+                               VerticalAlignment="Bottom" 
+                               Margin="0,0,0,50"
+                               IsVisible="{Binding PreviewStatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                    <!-- Placeholder / Instruction -->
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="5"
+                                IsVisible="{Binding PreviewImage, Converter={x:Static ObjectConverters.IsNull}}">
+                        <TextBlock Text="No Preview Available." Foreground="#555" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Drag &amp; Drop 3D files here" Foreground="#555" HorizontalAlignment="Center" FontStyle="Italic"/>
+                    </StackPanel>
+                    
+                    <!-- Refresh Button Overlay -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10" Spacing="5">
+                         <CheckBox IsChecked="{Binding AutoRefreshPreview}" Content="Auto-Refresh" Background="#444" Padding="5"/>
+                         <Button Command="{Binding RefreshPreviewCommand}" 
+                                Background="#444"
+                                ToolTip.Tip="Refresh 3D Preview">
+                            <TextBlock Text="🔄 Refresh"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Right: Properties -->
+        <Border Grid.Column="2" BorderBrush="#333" BorderThickness="1,0,0,0" Padding="10" Background="#252526">
+            <ScrollViewer>
+                <StackPanel Spacing="15">
+                    <TextBlock Text="Properties" FontWeight="Bold" FontSize="16"/>
+                    
+                    <!-- Selected Object Settings -->
+                    <StackPanel IsVisible="{Binding SelectedObject, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <!-- Object Name -->
+                        <TextBlock Text="Name" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding SelectedObject.Name}" Margin="0,0,0,10"/>
+
+                        <!-- Common Transform -->
+                        <TextBlock Text="Transform" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                        
+                        <!-- Position -->
+                        <TextBlock Text="Position"/>
+                        <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*">
+                            <TextBlock Text="X" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBox Text="{Binding SelectedObject.Position.X}" Grid.Column="1" Margin="0,0,5,0"/>
+                            <TextBlock Text="Y" VerticalAlignment="Center" Grid.Column="2" Margin="0,0,5,0"/>
+                            <TextBox Text="{Binding SelectedObject.Position.Y}" Grid.Column="3" Margin="0,0,5,0"/>
+                            <TextBlock Text="Z" VerticalAlignment="Center" Grid.Column="4" Margin="0,0,5,0"/>
+                            <TextBox Text="{Binding SelectedObject.Position.Z}" Grid.Column="5"/>
+                        </Grid>
+                        
+                        <!-- Rotation -->
+                        <TextBlock Text="Rotation" Margin="0,5,0,0"/>
+                        <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*">
+                            <TextBlock Text="X" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBox Text="{Binding SelectedObject.Rotation.X}" Grid.Column="1" Margin="0,0,5,0"/>
+                            <TextBlock Text="Y" VerticalAlignment="Center" Grid.Column="2" Margin="0,0,5,0"/>
+                            <TextBox Text="{Binding SelectedObject.Rotation.Y}" Grid.Column="3" Margin="0,0,5,0"/>
+                            <TextBlock Text="Z" VerticalAlignment="Center" Grid.Column="4" Margin="0,0,5,0"/>
+                            <TextBox Text="{Binding SelectedObject.Rotation.Z}" Grid.Column="5"/>
+                        </Grid>
+
+                        <!-- Scale -->
+                        <TextBlock Text="Scale" Margin="0,5,0,0"/>
+                        <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*">
+                            <TextBlock Text="X" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBox Text="{Binding SelectedObject.Scale.X}" Grid.Column="1" Margin="0,0,5,0"/>
+                            <TextBlock Text="Y" VerticalAlignment="Center" Grid.Column="2" Margin="0,0,5,0"/>
+                            <TextBox Text="{Binding SelectedObject.Scale.Y}" Grid.Column="3" Margin="0,0,5,0"/>
+                            <TextBlock Text="Z" VerticalAlignment="Center" Grid.Column="4" Margin="0,0,5,0"/>
+                            <TextBox Text="{Binding SelectedObject.Scale.Z}" Grid.Column="5"/>
+                        </Grid>
+
+                        <Separator Margin="0,15"/>
+
+                        <!-- Light Properties Section -->
+                        <ContentControl Content="{Binding SelectedObject}">
+                            <ContentControl.DataTemplates>
+                                <DataTemplate DataType="models:LightObject">
+                                    <StackPanel Spacing="10">
+                                        <TextBlock Text="Light Settings" FontWeight="SemiBold"/>
+                                        
+                                        <Grid ColumnDefinitions="Auto, *">
+                                            <TextBlock Text="Type:" VerticalAlignment="Center"/>
+                                            <ComboBox Grid.Column="1" SelectedItem="{Binding LightType}" Margin="5,0,0,0" HorizontalAlignment="Stretch">
+                                                <models:LightType>POINT</models:LightType>
+                                                <models:LightType>SUN</models:LightType>
+                                                <models:LightType>SPOT</models:LightType>
+                                                <models:LightType>AREA</models:LightType>
+                                            </ComboBox>
+                                        </Grid>
+                                        
+                                        <Grid ColumnDefinitions="Auto, *">
+                                            <TextBlock Text="Energy:" VerticalAlignment="Center"/>
+                                            <TextBox Text="{Binding Energy}" Grid.Column="1" Margin="5,0,0,0"/>
+                                        </Grid>
+                                        
+                                        <Grid ColumnDefinitions="Auto, *">
+                                            <TextBlock Text="Color:" VerticalAlignment="Center"/>
+                                            <TextBox Text="{Binding Color}" Grid.Column="1" Margin="5,0,0,0"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ContentControl.DataTemplates>
+                        </ContentControl>
+
+                        <!-- Modifiers -->
+                        <StackPanel Margin="0,15,0,0">
+                            <TextBlock Text="Modifiers" FontWeight="SemiBold"/>
+                            <Button Content="Add Auto-Rotate" Command="{Binding AddAutoRotateModifierCommand}" Margin="0,5"/>
+
+                            <ItemsControl ItemsSource="{Binding SelectedObject.Modifiers}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="models:Modifier">
+                                        <Border Background="#333" Padding="5" Margin="0,5" CornerRadius="3">
+                                            <Grid RowDefinitions="Auto, Auto">
+                                                <DockPanel Grid.Row="0" LastChildFill="False">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" VerticalAlignment="Center"/>
+                                                    
+                                                    <!-- Delete Button -->
+                                                    <Button Content="❌" 
+                                                            Command="{Binding $parent[UserControl].DataContext.RemoveModifierCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            Padding="5,2"
+                                                            Margin="5,0,0,0"
+                                                            Background="Transparent"
+                                                            DockPanel.Dock="Right"/>
+                                                </DockPanel>
+
+                                                <!-- Content based on Modifier Type -->
+                                                <ContentControl Grid.Row="1" Content="{Binding}" Margin="0,5,0,0">
+                                                    <ContentControl.DataTemplates>
+                                                        
+                                                        <!-- Auto Rotate Modifier Template -->
+                                                        <DataTemplate DataType="models:AutoRotateModifier">
+                                                            <StackPanel Spacing="5">
+                                                                <Grid ColumnDefinitions="Auto, *">
+                                                                    <TextBlock Text="Axis:" VerticalAlignment="Center"/>
+                                                                    <ComboBox SelectedIndex="2" Grid.Column="1" Margin="5,0,0,0" SelectedItem="{Binding Axis}">
+                                                                        <x:String>X</x:String>
+                                                                        <x:String>Y</x:String>
+                                                                        <x:String>Z</x:String>
+                                                                    </ComboBox>
+                                                                </Grid>
+                                                                <Grid ColumnDefinitions="Auto, *">
+                                                                    <TextBlock Text="Speed:" VerticalAlignment="Center"/>
+                                                                    <TextBox Text="{Binding Speed}" Grid.Column="1" Margin="5,0,0,0"/>
+                                                                </Grid>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                        
+                                                        <!-- Default Template -->
+                                                        <DataTemplate DataType="models:Modifier">
+                                                            <TextBlock Text="{Binding Type}" FontStyle="Italic"/>
+                                                        </DataTemplate>
+                                                        
+                                                    </ContentControl.DataTemplates>
+                                                </ContentControl>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                        
+                        <Separator Margin="0,15"/>
+                        <Button Content="Remove Object" Command="{Binding RemoveObjectCommand}" Background="Red" Foreground="White"/>
+                    </StackPanel>
+                    
+                    <!-- World Settings (Visible when no object selected) -->
+                    <StackPanel IsVisible="{Binding SelectedObject, Converter={x:Static ObjectConverters.IsNull}}">
+                        <TextBlock Text="World Environment" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                        
+                        <Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto, Auto" Margin="0,0,0,10">
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Color (Hex):" VerticalAlignment="Center" Margin="0,0,10,10"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding WorldSettings.BackgroundColor}" Margin="0,0,0,10"/>
+                            
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Strength:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding WorldSettings.Strength}"/>
+                        </Grid>
+
+                        <TextBlock Text="Camera Settings" FontWeight="SemiBold" Margin="0,10,0,10"/>
+                        
+                        <CheckBox Content="Auto-Center Camera" IsChecked="{Binding WorldSettings.AutoCamera}" Margin="0,0,0,10"/>
+                        
+                        <StackPanel IsVisible="{Binding IsManualCamera}">
+                            <TextBlock Text="Manual Camera (Orbit)" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,5"/>
+                            <Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto, Auto, Auto" Margin="0,0,0,10">
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Distance:" VerticalAlignment="Center" Margin="0,0,10,10"/>
+                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding WorldSettings.CameraDistance}" Margin="0,0,0,10"/>
+                                
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Height:" VerticalAlignment="Center" Margin="0,0,10,10"/>
+                                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding WorldSettings.CameraHeight}" Margin="0,0,0,10"/>
+                                
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Angle:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding WorldSettings.CameraAngle}"/>
+                            </Grid>
+                        </StackPanel>
+                        
+                        <TextBlock Text="Select an object to edit its properties." 
+                                   Foreground="Gray" HorizontalAlignment="Center" Margin="0,20,0,0" FontStyle="Italic"/>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,70 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AutoRenderer.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="AutoRenderer.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="AutoRenderer">
+
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto, *">
+        <!-- Top Bar -->
+        <Border Grid.Row="0" Background="#2D2D2D" Padding="10">
+            <Grid ColumnDefinitions="Auto, *, Auto">
+                <!-- Logo / Title -->
+                <TextBlock Text="AutoRenderer" FontSize="20" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                
+                <!-- Navigation Tabs -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                    <Button Command="{Binding NavigateToEditor}" Background="Transparent" BorderThickness="0">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <TextBlock Text="🏠"/>
+                            <TextBlock Text="Editor"/>
+                        </StackPanel>
+                    </Button>
+                    
+                    <Button Command="{Binding NavigateToRender}" Background="Transparent" BorderThickness="0">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <TextBlock Text="🎬"/>
+                            <TextBlock Text="Render"/>
+                        </StackPanel>
+                    </Button>
+                    
+                    <Button Command="{Binding NavigateToConsole}" Background="Transparent" BorderThickness="0">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <TextBlock Text="📟"/>
+                            <TextBlock Text="Console"/>
+                        </StackPanel>
+                    </Button>
+                    
+                    <Button Command="{Binding NavigateToSettings}" Background="Transparent" BorderThickness="0">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <TextBlock Text="⚙️"/>
+                            <TextBlock Text="Settings"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main Content -->
+        <Border Grid.Row="1" Padding="20">
+            <DockPanel>
+                <!-- Status Bar -->
+                <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Margin="0,10,0,0"/>
+                
+                <!-- Content -->
+                <TransitioningContentControl Content="{Binding CurrentView}" />
+            </DockPanel>
+        </Border>
+    </Grid>
+
+</Window>

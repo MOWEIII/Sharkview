@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:AutoRenderer.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="AutoRenderer.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+    
+    <StackPanel Margin="20" Spacing="20">
+        <TextBlock Text="Settings" FontSize="24" FontWeight="Bold"/>
+        
+        <!-- Blender Path -->
+        <StackPanel Spacing="10">
+            <TextBlock Text="Blender Executable Path" FontWeight="SemiBold"/>
+            <Grid ColumnDefinitions="*, Auto, Auto">
+                <TextBox Grid.Column="0" Text="{Binding BlenderPath}" Watermark="Path to blender.exe"/>
+                <Button Grid.Column="1" Content="Browse" Command="{Binding BrowseBlenderPathCommand}" Margin="10,0,0,0"/>
+                <Button Grid.Column="2" Content="Auto Detect" Command="{Binding AutoDetectBlenderCommand}" Margin="10,0,0,0"/>
+            </Grid>
+        </StackPanel>
+
+        <!-- Output Path -->
+        <StackPanel Spacing="10">
+            <TextBlock Text="Default Output Directory" FontWeight="SemiBold"/>
+            <Grid ColumnDefinitions="*, Auto">
+                <TextBox Grid.Column="0" Text="{Binding DefaultOutputPath}" Watermark="Path to output directory"/>
+                <Button Grid.Column="1" Content="Browse" Command="{Binding BrowseOutputPathCommand}" Margin="10,0,0,0"/>
+            </Grid>
+        </StackPanel>
+
+        <Button Content="Save Settings" Command="{Binding SaveSettingsCommand}" HorizontalAlignment="Right"/>
+        
+        <TextBlock Text="{Binding StatusMessage}" Foreground="Gray" FontStyle="Italic"/>
+    </StackPanel>
+</UserControl>
