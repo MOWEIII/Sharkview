@@ -48,11 +48,12 @@ public class RenderService : IRenderService
 
         var scriptPath = Path.Combine(Path.GetTempPath(), "autorender_script.py");
         
-        // Calculate frames (assuming 30fps)
-        int fps = 30;
+        // Use configured FPS
+        var videoSettings = _configService.Config.VideoSettings;
+        int fps = videoSettings.FrameRate;
         int frameEnd = (int)(duration * fps);
         
-        var pythonScript = GeneratePythonScript(objects, world, fullOutputPath, frameEnd, format, false);
+        var pythonScript = GeneratePythonScript(objects, world, fullOutputPath, frameEnd, format, false, videoSettings);
         
         await File.WriteAllTextAsync(scriptPath, pythonScript);
 
@@ -168,8 +169,10 @@ public class RenderService : IRenderService
         }
     }
 
-    private string GeneratePythonScript(IEnumerable<SceneObject> objects, WorldSettings world, string outputFile, int frameEnd, string format, bool isPreview)
+    private string GeneratePythonScript(IEnumerable<SceneObject> objects, WorldSettings world, string outputFile, int frameEnd, string format, bool isPreview, VideoExportSettings videoSettings = null)
     {
+        if (videoSettings == null) videoSettings = new VideoExportSettings();
+
         var sb = new StringBuilder();
         
         // Imports
@@ -179,7 +182,10 @@ public class RenderService : IRenderService
         sb.AppendLine("import os");
 
         // Clear Scene
-        sb.AppendLine("bpy.ops.wm.read_factory_settings(use_empty=True)");
+        // Use use_empty=False to ensure default addons (like FFMPEG IO) are loaded
+        sb.AppendLine("bpy.ops.wm.read_factory_settings(use_empty=False)");
+        sb.AppendLine("bpy.ops.object.select_all(action='SELECT')");
+        sb.AppendLine("bpy.ops.object.delete()");
 
         // World Settings
         sb.AppendLine("# World Settings");
@@ -377,8 +383,16 @@ public class RenderService : IRenderService
 
         // Render Settings
         sb.AppendLine("# Render Settings");
-        sb.AppendLine("bpy.context.scene.render.engine = 'CYCLES'"); // Force Cycles
-        sb.AppendLine("bpy.context.scene.cycles.samples = 16"); // Fast samples
+        // Use Eevee for faster rendering as per user request
+        sb.AppendLine("bpy.context.scene.render.engine = 'BLENDER_EEVEE'"); 
+        sb.AppendLine("bpy.context.scene.eevee.taa_render_samples = 64"); 
+        
+        // Resolution & FPS
+        sb.AppendLine($"bpy.context.scene.render.resolution_x = {videoSettings.ResolutionWidth}");
+        sb.AppendLine($"bpy.context.scene.render.resolution_y = {videoSettings.ResolutionHeight}");
+        sb.AppendLine("bpy.context.scene.render.resolution_percentage = 100");
+        sb.AppendLine($"bpy.context.scene.render.fps = {videoSettings.FrameRate}");
+        
         sb.AppendLine($"bpy.context.scene.render.filepath = '{outputFile.Replace("\\", "/")}'");
         
         if (isPreview)
@@ -389,9 +403,28 @@ public class RenderService : IRenderService
         }
         else
         {
+            sb.AppendLine("# Video Output Settings");
+            sb.AppendLine("is_video_configured = False");
             sb.AppendLine("try:");
+            sb.AppendLine("    # Try standard FFMPEG format");
             sb.AppendLine("    bpy.context.scene.render.image_settings.file_format = 'FFMPEG'");
-            
+            sb.AppendLine("    is_video_configured = True");
+            sb.AppendLine("except Exception as e:");
+            sb.AppendLine("    print(f'Warning: Standard FFMPEG format not available: {e}')");
+            sb.AppendLine("    try:");
+            sb.AppendLine("        # Try Blender 5.0+ specific media_type approach");
+            sb.AppendLine("        bpy.context.scene.render.image_settings.file_format = 'PNG'");
+            sb.AppendLine("        bpy.context.scene.render.image_settings.media_type = 'VIDEO'");
+            sb.AppendLine("        is_video_configured = True");
+            sb.AppendLine("    except Exception as e2:");
+            sb.AppendLine("        print(f'Error: Could not configure video output: {e2}')");
+            sb.AppendLine("        try:");
+            sb.AppendLine("            formats = [i.identifier for i in bpy.context.scene.render.image_settings.bl_rna.properties['file_format'].enum_items]");
+            sb.AppendLine("            print(f'Available formats: {formats}')");
+            sb.AppendLine("        except: pass");
+            sb.AppendLine("        raise e2");
+
+            sb.AppendLine("if is_video_configured:");
             if (format == "AVI")
                 sb.AppendLine("    bpy.context.scene.render.ffmpeg.format = 'AVI'");
             else if (format == "MKV")
@@ -399,10 +432,30 @@ public class RenderService : IRenderService
             else // MP4
                 sb.AppendLine("    bpy.context.scene.render.ffmpeg.format = 'MPEG4'");
 
-            sb.AppendLine("    bpy.context.scene.render.ffmpeg.codec = 'H264'");
-            sb.AppendLine("except TypeError:");
-            sb.AppendLine("    print('Warning: FFMPEG video output not available. Rendering as PNG sequence.')");
-            sb.AppendLine("    bpy.context.scene.render.image_settings.file_format = 'PNG'");
+            string codec = "H264";
+            if (videoSettings.Codec == "VP9") codec = "WEBM"; 
+            
+            sb.AppendLine($"    bpy.context.scene.render.ffmpeg.codec = '{codec}'");
+
+            // Bitrate Control
+            if (videoSettings.BitrateMode == "CBR")
+            {
+                sb.AppendLine("    bpy.context.scene.render.ffmpeg.constant_rate_factor = 'NONE'");
+                sb.AppendLine($"    bpy.context.scene.render.ffmpeg.video_bitrate = {videoSettings.BitrateKbps}");
+                sb.AppendLine($"    bpy.context.scene.render.ffmpeg.min_video_bitrate = {videoSettings.BitrateKbps}");
+                sb.AppendLine($"    bpy.context.scene.render.ffmpeg.max_video_bitrate = {videoSettings.BitrateKbps}");
+            }
+            else
+            {
+                sb.AppendLine("    bpy.context.scene.render.ffmpeg.constant_rate_factor = 'MEDIUM'");
+                sb.AppendLine($"    bpy.context.scene.render.ffmpeg.video_bitrate = {videoSettings.BitrateKbps}");
+            }
+            
+            sb.AppendLine($"    bpy.context.scene.render.ffmpeg.gopsize = {videoSettings.GopSize}");
+            sb.AppendLine("    bpy.context.scene.render.ffmpeg.ffmpeg_preset = 'GOOD'");
+
+            sb.AppendLine("print(f'DEBUG: Output Format: {bpy.context.scene.render.image_settings.file_format}')");
+            sb.AppendLine("print(f'DEBUG: Output Path: {bpy.context.scene.render.filepath}')");
             
             sb.AppendLine($"bpy.context.scene.frame_end = {frameEnd}");
             sb.AppendLine("bpy.ops.render.render(animation=True)");

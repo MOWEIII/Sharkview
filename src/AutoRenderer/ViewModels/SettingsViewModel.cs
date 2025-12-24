@@ -21,6 +21,30 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private string _statusMessage = "";
 
+    // Video Settings
+    [ObservableProperty] private int _frameRate;
+    [ObservableProperty] private int _resolutionWidth;
+    [ObservableProperty] private int _resolutionHeight;
+    [ObservableProperty] private string _codec;
+    [ObservableProperty] private string _bitrateMode;
+    [ObservableProperty] private int _bitrateKbps;
+    [ObservableProperty] private int _gopSize;
+
+    public System.Collections.Generic.List<int> AvailableFrameRates { get; } = new() { 24, 30, 60 };
+    public System.Collections.Generic.List<string> AvailableCodecs { get; } = new() { "H.264", "H.265", "VP9" };
+    public System.Collections.Generic.List<string> AvailableBitrateModes { get; } = new() { "CBR", "VBR" };
+    public System.Collections.Generic.List<string> AvailableResolutions { get; } = new() { "1280x720", "1920x1080", "3840x2160", "Custom" };
+
+    [ObservableProperty]
+    private string _selectedResolutionPreset;
+
+    partial void OnSelectedResolutionPresetChanged(string value)
+    {
+        if (value == "1280x720") { ResolutionWidth = 1280; ResolutionHeight = 720; }
+        else if (value == "1920x1080") { ResolutionWidth = 1920; ResolutionHeight = 1080; }
+        else if (value == "3840x2160") { ResolutionWidth = 3840; ResolutionHeight = 2160; }
+    }
+
     public SettingsViewModel(
         IConfigurationService configService, 
         IBlenderService blenderService,
@@ -32,6 +56,19 @@ public partial class SettingsViewModel : ViewModelBase
 
         _blenderPath = _configService.Config.BlenderPath;
         _defaultOutputPath = _configService.Config.DefaultOutputPath;
+
+        // Load Video Settings
+        var v = _configService.Config.VideoSettings;
+        _frameRate = v.FrameRate;
+        _resolutionWidth = v.ResolutionWidth;
+        _resolutionHeight = v.ResolutionHeight;
+        _codec = v.Codec;
+        _bitrateMode = v.BitrateMode;
+        _bitrateKbps = v.BitrateKbps;
+        _gopSize = v.GopSize;
+
+        _selectedResolutionPreset = $"{_resolutionWidth}x{_resolutionHeight}";
+        if (!AvailableResolutions.Contains(_selectedResolutionPreset)) _selectedResolutionPreset = "Custom";
     }
 
     [RelayCommand]
@@ -85,8 +122,16 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     private async Task SaveSettings()
     {
-        // Manual validation if needed, but Browse updates config immediately in this logic.
-        // We can just save just in case.
+        // Save Video Settings
+        var v = _configService.Config.VideoSettings;
+        v.FrameRate = FrameRate;
+        v.ResolutionWidth = ResolutionWidth;
+        v.ResolutionHeight = ResolutionHeight;
+        v.Codec = Codec;
+        v.BitrateMode = BitrateMode;
+        v.BitrateKbps = BitrateKbps;
+        v.GopSize = GopSize;
+
         _configService.SaveConfiguration();
         StatusMessage = "Settings saved.";
         await Task.CompletedTask;

@@ -27,7 +27,7 @@ A modern, cross-platform automated rendering tool built with **C#** and **Avalon
 ## 🚀 Getting Started
 
 ### Prerequisites
-*   **Blender 3.0+** (Tested with 5.0).
+*   **Blender 5.0+** (Tested with 5.0).
 *   **.NET 9.0 SDK**.
 
 ### Installation & Run
