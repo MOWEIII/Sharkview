@@ -29,11 +29,17 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private string _bitrateMode;
     [ObservableProperty] private int _bitrateKbps;
     [ObservableProperty] private int _gopSize;
+    [ObservableProperty] private string _renderEngine;
+    [ObservableProperty] private string _outputFileName = "output";
+    [ObservableProperty] private double _duration = 5.0;
+    [ObservableProperty] private string _selectedFormat = "MP4";
 
     public System.Collections.Generic.List<int> AvailableFrameRates { get; } = new() { 24, 30, 60 };
     public System.Collections.Generic.List<string> AvailableCodecs { get; } = new() { "H.264", "H.265", "VP9" };
     public System.Collections.Generic.List<string> AvailableBitrateModes { get; } = new() { "CBR", "VBR" };
+    public System.Collections.Generic.List<string> AvailableRenderEngines { get; } = new() { "BLENDER_EEVEE", "CYCLES" };
     public System.Collections.Generic.List<string> AvailableResolutions { get; } = new() { "1280x720", "1920x1080", "3840x2160", "Custom" };
+    public System.Collections.Generic.List<string> AvailableFormats { get; } = new() { "MP4", "AVI", "MKV" };
 
     [ObservableProperty]
     private string _selectedResolutionPreset;
@@ -66,6 +72,8 @@ public partial class SettingsViewModel : ViewModelBase
         _bitrateMode = v.BitrateMode;
         _bitrateKbps = v.BitrateKbps;
         _gopSize = v.GopSize;
+        _renderEngine = v.RenderEngine;
+        if (string.IsNullOrEmpty(_renderEngine)) _renderEngine = "BLENDER_EEVEE";
 
         _selectedResolutionPreset = $"{_resolutionWidth}x{_resolutionHeight}";
         if (!AvailableResolutions.Contains(_selectedResolutionPreset)) _selectedResolutionPreset = "Custom";
@@ -131,6 +139,7 @@ public partial class SettingsViewModel : ViewModelBase
         v.BitrateMode = BitrateMode;
         v.BitrateKbps = BitrateKbps;
         v.GopSize = GopSize;
+        v.RenderEngine = RenderEngine;
 
         _configService.SaveConfiguration();
         StatusMessage = "Settings saved.";

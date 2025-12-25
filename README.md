@@ -8,80 +8,30 @@ A modern, cross-platform automated rendering tool built with **C#** and **Avalon
 
 ## ✨ Key Features
 
-*   **🎬 Scene Editor**:
-    *   **Import Models**: Supports **FBX, OBJ, GLB, STL** formats.
-    *   **Live Preview**: Real-time 3D preview powered by a persistent Blender backend for instant feedback.
-    *   **Scene Graph**: Manage lights and objects in a hierarchical view.
-    *   **Properties Panel**: Precise control over Position, Rotation (Euler XYZ), and Scale.
-    *   **Modifiers**: Add procedural animations like **Auto-Rotate** directly from the UI.
+*   **🎬 Scene Editor**: Import models (**FBX, OBJ, GLB, STL**), real-time preview, and apply modifiers like **Auto-Rotate** (Frame-Rate Independent).
+*   **🎥 Automated Rendering**: Batch render videos using **EEVEE** or **Cycles** with customizable encoding (H.264/H.265). Supports **Blender 5.0+**.
+*   **⚡ Quick Actions**: Instantly **Save Image** or **Quick Render** directly from the editor.
+*   **📊 Live Feedback**: Real-time status bar updates and integrated Blender log streaming.
 
-*   **🎥 Rendering**:
-    *   **Batch Processing**: Generates Python automation scripts to drive Blender in the background.
-    *   **Format Support**: Exports to **MP4, AVI, MKV**, or falls back to **PNG Sequences** if video codecs are unavailable.
-    *   **Console Output**: Real-time streaming of Blender logs to the built-in Console for debugging.
+## 📖 Usage
 
-*   **🛠️ Tools**:
-    *   **Console Tab**: dedicated system log for monitoring render progress and errors.
-    *   **Settings**: Auto-detection of Blender installation and customizable output paths.
+### 1. Configuration
+Navigate to **Settings** to configure:
+*   **Blender Path**: Auto-detect or manually set `blender.exe`.
+*   **Render**: Choose Engine (EEVEE/Cycles), Resolution, Duration, and Output Directory.
+*   **Video**: Set Codec and Bitrate.
 
-## 🚀 Getting Started
-
-### Prerequisites
-*   **Blender 5.0+** (Tested with 5.0).
-*   **.NET 9.0 SDK**.
-
-### Installation & Run
-
-1.  **Clone the repository**:
-    ```bash
-    git clone https://github.com/yourusername/AutoRenderer.git
-    cd AutoRenderer
-    ```
-
-2.  **Build**:
-    ```bash
-    dotnet build
-    ```
-
-3.  **Run**:
-    ```bash
-    dotnet run --project src/AutoRenderer/AutoRenderer.csproj
-    ```
-
-## 📖 User Guide
-
-### 1. ⚙️ Configuration
-Upon first launch, navigate to the **Settings** tab:
-*   **Blender Path**: Click "Auto Detect" or manually browse to your `blender.exe`.
-*   **Output Directory**: Choose where your rendered videos/images will be saved.
-
-### 2. 🏠 Scene Composition (Editor)
-*   **Import**: Click "Import Model" to load your 3D assets.
-*   **Camera**:
-    *   **Auto-Center**: Automatically keeps your object in frame.
-    *   **Manual Control**: Uncheck "Auto-Center" to set specific Distance, Height, and Angle.
-*   **Preview**: Toggle "Auto-Refresh" to see changes instantly, or click "Refresh" manually.
-
-### 3. 🎬 Rendering
-*   Go to the **Render** tab.
-*   Set your **Output Filename**, **Duration** (seconds), and **Resolution**.
-*   Click **Start Rendering**.
-*   Switch to the **Console** tab to watch the progress.
+### 2. Scene Composition
+*   **Import**: Drag & Drop or select 3D models.
+*   **Modifiers**: Add procedural animations (e.g., Rotation speed in °/s).
+*   **Camera**: Use Auto-Center or manual controls.
+*   **Render**: Click **Quick Render** to generate video based on global settings.
 
 ## 🏗️ Architecture
 
-The solution follows a clean **MVVM** architecture:
-
-*   **`src/AutoRenderer`**: The UI layer using Avalonia XAML.
-*   **`src/AutoRenderer.Core`**: Business logic and Services.
-    *   `RenderService`: Manages the persistent Blender process and socket communication.
-    *   `BlenderService`: Handles path detection.
-    *   `ConsoleService`: Centralized logging system.
-*   **`tests/AutoRenderer.Tests`**: XUnit test suite.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please fork the repository and submit a Pull Request.
+*   **UI**: Avalonia XAML (MVVM)
+*   **Core**: C# .NET 9.0
+*   **Backend**: Blender Python API (Socket Communication)
 
 ## 📄 License
 

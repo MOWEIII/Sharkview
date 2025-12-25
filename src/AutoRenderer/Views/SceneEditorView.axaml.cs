@@ -13,20 +13,22 @@ public partial class SceneEditorView : UserControl
         AddHandler(DragDrop.DropEvent, Drop);
     }
 
-    private async void Drop(object? sender, DragEventArgs e)
+    private void Drop(object? sender, DragEventArgs e)
     {
-        if (e.Data.Contains(DataFormats.Files))
+        // Get files from DragEventArgs
+#pragma warning disable CS0618 // DragEventArgs.Data is obsolete
+        var files = e.Data.GetFiles();
+#pragma warning restore CS0618
+        if (files != null)
         {
-            var files = e.Data.GetFiles();
-            var viewModel = DataContext as SceneEditorViewModel;
-
-            if (viewModel != null && files != null)
+            var file = files.FirstOrDefault();
+            if (file != null && DataContext is SceneEditorViewModel vm)
             {
-                foreach (var file in files)
-                {
-                    var path = file.Path.LocalPath;
-                    await viewModel.ImportModelFromPath(path);
-                }
+                // File path is usually a Uri, convert to local path
+                var path = file.Path.LocalPath;
+                // Import logic is async but we are in a void event handler.
+                // Fire and forget is acceptable here for drag & drop UI interaction.
+                _ = vm.ImportModelFromPath(path);
             }
         }
     }

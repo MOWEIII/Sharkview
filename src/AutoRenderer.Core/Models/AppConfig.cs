@@ -22,4 +22,5 @@ public class VideoExportSettings
     public string BitrateMode { get; set; } = "VBR"; // CBR, VBR
     public int BitrateKbps { get; set; } = 5000;
     public int GopSize { get; set; } = 18;
+    public string RenderEngine { get; set; } = "BLENDER_EEVEE"; // BLENDER_EEVEE, CYCLES
 }

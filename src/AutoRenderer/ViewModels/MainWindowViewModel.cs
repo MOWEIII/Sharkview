@@ -17,24 +17,36 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public SettingsViewModel SettingsViewModel { get; }
     public SceneEditorViewModel SceneEditorViewModel { get; }
-    public RenderViewModel RenderViewModel { get; }
     public ConsoleViewModel ConsoleViewModel { get; }
+
+    private readonly IConsoleService _consoleService;
+    [ObservableProperty] private string _latestLog = "";
 
     public MainWindowViewModel(
         IConfigurationService configService, 
         IBlenderService blenderService,
+        IConsoleService consoleService,
         SettingsViewModel settingsViewModel,
         SceneEditorViewModel sceneEditorViewModel,
-        RenderViewModel renderViewModel,
         ConsoleViewModel consoleViewModel)
     {
         _configService = configService;
         _blenderService = blenderService;
+        _consoleService = consoleService;
         SettingsViewModel = settingsViewModel;
         SceneEditorViewModel = sceneEditorViewModel;
-        RenderViewModel = renderViewModel;
         ConsoleViewModel = consoleViewModel;
         
+        // Bind to ConsoleService
+        _consoleService.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(IConsoleService.LatestLog))
+            {
+                LatestLog = _consoleService.LatestLog;
+            }
+        };
+        LatestLog = _consoleService.LatestLog; // Initial value
+
         // Default view
         CurrentView = SceneEditorViewModel;
 
@@ -56,12 +68,6 @@ public partial class MainWindowViewModel : ViewModelBase
     public void NavigateToEditor()
     {
         CurrentView = SceneEditorViewModel;
-    }
-
-    [RelayCommand]
-    public void NavigateToRender()
-    {
-        CurrentView = RenderViewModel;
     }
 
     [RelayCommand]

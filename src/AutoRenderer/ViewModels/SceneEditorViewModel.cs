@@ -240,4 +240,47 @@ public partial class SceneEditorViewModel : ViewModelBase
             IsLoadingPreview = false;
         }
     }
+
+    [RelayCommand]
+    private async Task SavePreviewAsImage()
+    {
+        if (PreviewImage == null) return;
+
+        var path = await _filePickerService.PickSaveFileAsync("Save Preview Image", "png");
+        if (!string.IsNullOrEmpty(path))
+        {
+             try
+             {
+                 PreviewImage.Save(path);
+                 _consoleService.Log($"Preview saved to: {path}");
+             }
+             catch (Exception ex)
+             {
+                 _consoleService.Log($"Error saving image: {ex.Message}");
+             }
+        }
+    }
+
+    [RelayCommand]
+    private async Task QuickRender()
+    {
+        // For quick render, we'll use the default output path and a timestamped filename
+        var configService = App.Current?.Services?.GetService(typeof(IConfigurationService)) as IConfigurationService;
+        var outputPath = configService?.Config.DefaultOutputPath;
+
+        if (string.IsNullOrEmpty(outputPath)) outputPath = Path.GetTempPath();
+
+        var fileName = $"Render_{DateTime.Now:yyyyMMdd_HHmmss}";
+        
+        _consoleService.Log("Starting Quick Render...");
+        try 
+        {
+            if (outputPath != null)
+                await _renderService.RenderSceneAsync(SceneObjects, WorldSettings, outputPath, fileName);
+        }
+        catch (Exception ex)
+        {
+            _consoleService.Log($"Quick Render Failed: {ex.Message}");
+        }
+    }
 }

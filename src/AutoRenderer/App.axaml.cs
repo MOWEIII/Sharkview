@@ -55,6 +55,12 @@ public partial class App : Application
             {
                 filePickerService.SetStorageProvider(desktop.MainWindow.StorageProvider);
             }
+
+            desktop.Exit += (sender, args) =>
+            {
+                var renderService = Services.GetRequiredService<IRenderService>();
+                renderService.Shutdown();
+            };
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -73,7 +79,6 @@ public partial class App : Application
         services.AddTransient<MainWindowViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<SceneEditorViewModel>();
-        services.AddSingleton<RenderViewModel>();
         services.AddSingleton<ConsoleViewModel>();
     }
 

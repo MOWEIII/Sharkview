@@ -36,6 +36,32 @@ public class FilePickerService : IFilePickerService
         return files.FirstOrDefault()?.Path.LocalPath;
     }
 
+    public async Task<string?> PickSaveFileAsync(string title, string defaultExtension)
+    {
+        if (_storageProvider == null) return null;
+
+        var options = new FilePickerSaveOptions
+        {
+            Title = title,
+            DefaultExtension = defaultExtension,
+            ShowOverwritePrompt = true,
+            FileTypeChoices = new List<FilePickerFileType>
+            {
+                new FilePickerFileType($"{defaultExtension.ToUpper()} Image")
+                {
+                    Patterns = new[] { $"*.{defaultExtension}" }
+                },
+                new FilePickerFileType("All Files")
+                {
+                    Patterns = new[] { "*.*" }
+                }
+            }
+        };
+
+        var file = await _storageProvider.SaveFilePickerAsync(options);
+        return file?.Path.LocalPath;
+    }
+
     public async Task<string?> PickFolderAsync(string title)
     {
         if (_storageProvider == null) return null;

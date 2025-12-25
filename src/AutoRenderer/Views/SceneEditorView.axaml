@@ -95,6 +95,28 @@
                             <TextBlock Text="🔄 Refresh"/>
                         </Button>
                     </StackPanel>
+
+                    <!-- Bottom Quick Actions -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,10" Spacing="10">
+                        <Button Command="{Binding SavePreviewAsImageCommand}" 
+                                IsVisible="{Binding PreviewImage, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                Background="#444"
+                                ToolTip.Tip="Save current preview as PNG">
+                             <StackPanel Orientation="Horizontal" Spacing="5">
+                                 <TextBlock Text="💾"/>
+                                 <TextBlock Text="Save Image"/>
+                             </StackPanel>
+                        </Button>
+                        
+                        <Button Command="{Binding QuickRenderCommand}" 
+                                Background="#2E7D32"
+                                ToolTip.Tip="Render video with current settings">
+                             <StackPanel Orientation="Horizontal" Spacing="5">
+                                 <TextBlock Text="🎬"/>
+                                 <TextBlock Text="Quick Render"/>
+                             </StackPanel>
+                        </Button>
+                    </StackPanel>
                 </Grid>
             </Border>
         </Grid>
@@ -219,7 +241,7 @@
                                                                     </ComboBox>
                                                                 </Grid>
                                                                 <Grid ColumnDefinitions="Auto, *">
-                                                                    <TextBlock Text="Speed:" VerticalAlignment="Center"/>
+                                                                    <TextBlock Text="Speed (°/s):" VerticalAlignment="Center" ToolTip.Tip="Rotation speed in degrees per second"/>
                                                                     <TextBox Text="{Binding Speed}" Grid.Column="1" Margin="5,0,0,0"/>
                                                                 </Grid>
                                                             </StackPanel>

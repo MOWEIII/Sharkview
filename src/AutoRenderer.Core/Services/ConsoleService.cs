@@ -9,6 +9,9 @@ public partial class ConsoleService : ObservableObject, IConsoleService
     [ObservableProperty]
     private string _logs = "Console initialized...\n";
 
+    [ObservableProperty]
+    private string _latestLog = "Ready";
+
     private readonly StringBuilder _logBuilder = new StringBuilder();
 
     public ConsoleService()
@@ -25,11 +28,13 @@ public partial class ConsoleService : ObservableObject, IConsoleService
         
         // Update property (triggers UI)
         Logs = _logBuilder.ToString();
+        LatestLog = message;
     }
 
     public void Clear()
     {
         _logBuilder.Clear();
         Logs = "";
+        LatestLog = "Cleared";
     }
 }
