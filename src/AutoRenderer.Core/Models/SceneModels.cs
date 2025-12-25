@@ -23,8 +23,31 @@ public partial class SceneObject : ObservableObject
     public ObservableCollection<Modifier> Modifiers { get; set; } = new();
 }
 
+public enum EnvironmentType
+{
+    SolidColor,
+    StudioPreset,
+    CustomImage
+}
+
 public partial class WorldSettings : ObservableObject
 {
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSolidColor))]
+    [NotifyPropertyChangedFor(nameof(IsPreset))]
+    [NotifyPropertyChangedFor(nameof(IsCustom))]
+    private EnvironmentType _environmentType = EnvironmentType.SolidColor;
+
+    public bool IsSolidColor => EnvironmentType == EnvironmentType.SolidColor;
+    public bool IsPreset => EnvironmentType == EnvironmentType.StudioPreset;
+    public bool IsCustom => EnvironmentType == EnvironmentType.CustomImage;
+
+    [ObservableProperty]
+    private string _environmentTexturePath = string.Empty;
+
+    [ObservableProperty]
+    private bool _showEnvironmentBackground = true;
+
     [ObservableProperty]
     private string _backgroundColor = "#333333"; // Lighter gray default for visibility
 

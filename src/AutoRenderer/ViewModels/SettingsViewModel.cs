@@ -73,6 +73,8 @@ public partial class SettingsViewModel : ViewModelBase
         _bitrateKbps = v.BitrateKbps;
         _gopSize = v.GopSize;
         _renderEngine = v.RenderEngine;
+        _outputFileName = v.OutputName;
+        _duration = v.Duration;
         if (string.IsNullOrEmpty(_renderEngine)) _renderEngine = "BLENDER_EEVEE";
 
         _selectedResolutionPreset = $"{_resolutionWidth}x{_resolutionHeight}";
@@ -130,6 +132,10 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     private async Task SaveSettings()
     {
+        // Save Core Settings
+        _configService.Config.BlenderPath = BlenderPath;
+        _configService.Config.DefaultOutputPath = DefaultOutputPath;
+
         // Save Video Settings
         var v = _configService.Config.VideoSettings;
         v.FrameRate = FrameRate;
@@ -140,6 +146,14 @@ public partial class SettingsViewModel : ViewModelBase
         v.BitrateKbps = BitrateKbps;
         v.GopSize = GopSize;
         v.RenderEngine = RenderEngine;
+        v.OutputName = OutputFileName;
+        v.Duration = Duration;
+        if (!string.IsNullOrEmpty(SelectedFormat))
+        {
+             // Although we don't store Format in VideoSettings explicitly in previous code, 
+             // if we wanted to persist it we should add it to AppConfig.VideoSettings model.
+             // For now, assuming format selection is transient or handled elsewhere if not in model.
+        }
 
         _configService.SaveConfiguration();
         StatusMessage = "Settings saved.";

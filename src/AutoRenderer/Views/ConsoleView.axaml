@@ -7,23 +7,38 @@
              x:Class="AutoRenderer.Views.ConsoleView"
              x:DataType="vm:ConsoleViewModel">
     
-    <Grid RowDefinitions="Auto, *">
-        <Border Grid.Row="0" Background="#252526" Padding="10">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-                <TextBlock Text="System Console" FontWeight="Bold" VerticalAlignment="Center"/>
-                <Button Content="Clear Logs" Command="{Binding ClearLogsCommand}"/>
-            </StackPanel>
-        </Border>
+    <Grid RowDefinitions="Auto, *" Margin="10">
         
-        <TextBox Grid.Row="1" 
-                 Text="{Binding Logs}" 
-                 IsReadOnly="True" 
-                 FontFamily="Consolas, Monospace" 
-                 FontSize="13"
-                 Background="#1E1E1E"
-                 Foreground="#D4D4D4"
-                 BorderThickness="0"
-                 AcceptsReturn="True"
-                 TextWrapping="Wrap"/>
+        <!-- Header -->
+        <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,10">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <TextBlock Text="System Console" FontSize="20" FontWeight="Bold"/>
+                <Border Background="#333" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                    <TextBlock Text="LIVE" FontSize="10" FontWeight="Bold" Foreground="#4CD964"/>
+                </Border>
+            </StackPanel>
+            
+            <Button Grid.Column="1" Command="{Binding ClearLogsCommand}" Background="Transparent" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <TextBlock Text="🗑️"/>
+                    <TextBlock Text="Clear Logs"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+        
+        <!-- Console Output -->
+        <Border Grid.Row="1" Classes="Card" Padding="0" ClipToBounds="True" Background="#101010">
+            <TextBox Text="{Binding Logs}" 
+                     IsReadOnly="True" 
+                     FontFamily="Consolas, Menlo, Monaco, Courier New, Monospace" 
+                     FontSize="13"
+                     Background="Transparent"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
+                     BorderThickness="0"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     Padding="15"
+                     CaretBrush="White"/>
+        </Border>
     </Grid>
 </UserControl>

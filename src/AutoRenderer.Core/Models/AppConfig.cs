@@ -15,6 +15,8 @@ public class AppConfig
 
 public class VideoExportSettings
 {
+    public string OutputName { get; set; } = "Render";
+    public double Duration { get; set; } = 5.0;
     public int FrameRate { get; set; } = 30;
     public int ResolutionWidth { get; set; } = 1920;
     public int ResolutionHeight { get; set; } = 1080;

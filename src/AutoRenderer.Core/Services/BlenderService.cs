@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -109,5 +110,45 @@ public class BlenderService : IBlenderService
         // float.TryParse(version, out float v) && v >= 5.0
         
         return true;
+    }
+
+    public async Task<string[]> GetStudioLightsAsync(string blenderPath)
+    {
+        await Task.Yield(); // Ensure async signature is valid even if we do sync IO
+        
+        if (string.IsNullOrEmpty(blenderPath) || !File.Exists(blenderPath))
+            return Array.Empty<string>();
+
+        var installDir = Path.GetDirectoryName(blenderPath);
+        if (string.IsNullOrEmpty(installDir)) return Array.Empty<string>();
+
+        try
+        {
+            // Find version directory (e.g. "4.0", "3.6")
+            var versionDirs = Directory.GetDirectories(installDir);
+            
+            foreach (var dir in versionDirs)
+            {
+                var dirName = Path.GetFileName(dir);
+                // Check if it looks like a version number (X.X)
+                if (Regex.IsMatch(dirName, @"^\d+\.\d+$"))
+                {
+                    var studioLightPath = Path.Combine(dir, "datafiles", "studiolights", "world");
+                    if (Directory.Exists(studioLightPath))
+                    {
+                        var files = new List<string>();
+                        files.AddRange(Directory.GetFiles(studioLightPath, "*.exr"));
+                        files.AddRange(Directory.GetFiles(studioLightPath, "*.hdr"));
+                        return files.ToArray();
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Ignore permission errors etc
+        }
+        
+        return Array.Empty<string>();
     }
 }

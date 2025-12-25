@@ -64,76 +64,94 @@ public class RenderService : IRenderService, IDisposable
         
         await File.WriteAllTextAsync(scriptPath, pythonScript);
 
-        var startInfo = new ProcessStartInfo
+        try
         {
-            FileName = blenderPath,
-            Arguments = $"--background --python \"{scriptPath}\"",
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        };
-
-        _consoleService.Log("Launching Blender process...");
-        using var process = new Process { StartInfo = startInfo };
-        
-        process.OutputDataReceived += (sender, e) =>
-        {
-            if (!string.IsNullOrEmpty(e.Data))
+            var startInfo = new ProcessStartInfo
             {
-                _consoleService.Log($"[Blender] {e.Data}");
-            }
-        };
-        
-        process.ErrorDataReceived += (sender, e) =>
-        {
-            if (!string.IsNullOrEmpty(e.Data))
-            {
-                _consoleService.Log($"[Blender Error] {e.Data}");
-            }
-        };
+                FileName = blenderPath,
+                Arguments = $"--background --python \"{scriptPath}\"",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
 
-        process.Start();
-        ChildProcessTracker.AddProcess(process);
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
-        
-        await process.WaitForExitAsync();
-
-        if (process.ExitCode != 0)
-        {
-            _consoleService.Log($"Render Failed with Exit Code: {process.ExitCode}");
-            throw new Exception($"Blender rendering failed with exit code {process.ExitCode}. Check console logs for details.");
-        }
-        else
-        {
-            _consoleService.Log("Render Complete!");
-            // Check if file exists (Blender might have appended frame range)
-            if (File.Exists(fullOutputPath))
+            _consoleService.Log("Launching Blender process...");
+            using var process = new Process { StartInfo = startInfo };
+            
+            process.OutputDataReceived += (sender, e) =>
             {
-                _consoleService.Log($"File saved at: {fullOutputPath}");
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    _consoleService.Log($"[Blender] {e.Data}");
+                }
+            };
+            
+            process.ErrorDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    _consoleService.Log($"[Blender Error] {e.Data}");
+                }
+            };
+
+            process.Start();
+            ChildProcessTracker.AddProcess(process);
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+            
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode != 0)
+            {
+                _consoleService.Log($"Render Failed with Exit Code: {process.ExitCode}");
+                throw new Exception($"Blender rendering failed with exit code {process.ExitCode}. Check console logs for details.");
             }
             else
             {
-                // Check for frame range file (e.g. video0001-0150.mp4)
-                var dir = Path.GetDirectoryName(fullOutputPath);
-                if (dir != null)
+                _consoleService.Log("Render Complete!");
+                // Check if file exists (Blender might have appended frame range)
+                if (File.Exists(fullOutputPath))
                 {
-                    var name = Path.GetFileNameWithoutExtension(fullOutputPath);
-                    var files = Directory.GetFiles(dir, $"{name}*{ext}");
-                    if (files.Length > 0)
-                    {
-                         _consoleService.Log($"File saved at (Blender appended frames): {files[0]}");
-                    }
-                    else
-                    {
-                        _consoleService.Log($"Warning: Output file not found exactly at {fullOutputPath}. Check folder content.");
-                    }
+                    _consoleService.Log($"File saved at: {fullOutputPath}");
                 }
                 else
                 {
-                     _consoleService.Log($"Warning: Output directory invalid: {fullOutputPath}.");
+                    // Check for frame range file (e.g. video0001-0150.mp4)
+                    var dir = Path.GetDirectoryName(fullOutputPath);
+                    if (dir != null)
+                    {
+                        var name = Path.GetFileNameWithoutExtension(fullOutputPath);
+                        var files = Directory.GetFiles(dir, $"{name}*{ext}");
+                        if (files.Length > 0)
+                        {
+                             _consoleService.Log($"File saved at (Blender appended frames): {files[0]}");
+                        }
+                        else
+                        {
+                            _consoleService.Log($"Warning: Output file not found exactly at {fullOutputPath}. Check folder content.");
+                        }
+                    }
+                    else
+                    {
+                         _consoleService.Log($"Warning: Output directory invalid: {fullOutputPath}.");
+                    }
                 }
+            }
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(scriptPath))
+                {
+                    File.Delete(scriptPath);
+                    // _consoleService.Log($"Cleaned up temp script: {scriptPath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _consoleService.Log($"Warning: Failed to delete temp script: {ex.Message}");
             }
         }
     }
@@ -147,41 +165,59 @@ public class RenderService : IRenderService, IDisposable
 
         var script = GeneratePythonScript(objects, world, outputPath, 1, "PNG", true);
         
-        // Send to Server
-        try 
+        // Retry logic with timeout
+        int maxRetries = 2;
+        for (int retry = 0; retry <= maxRetries; retry++)
         {
-            using var client = new System.Net.Sockets.TcpClient();
-            await client.ConnectAsync("127.0.0.1", ServerPort);
-            using var stream = client.GetStream();
-            
-            // Send
-            var data = Encoding.UTF8.GetBytes(script);
-            var header = BitConverter.GetBytes((uint)data.Length); // Little Endian
-            if (!BitConverter.IsLittleEndian) Array.Reverse(header);
-            
-            await stream.WriteAsync(header);
-            await stream.WriteAsync(data);
-            
-            // Receive Response
-            var respHeader = new byte[4];
-            await stream.ReadExactlyAsync(respHeader);
-            var respLen = BitConverter.ToUInt32(respHeader);
-            if (!BitConverter.IsLittleEndian) 
+            try 
             {
-                // Note: Manually swap if needed, but BitConverter usually matches sys architecture
-                // For simplicity assuming little endian (x86/x64) matches Python struct '<I'
+                // Set a timeout for the entire operation
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+                
+                using var client = new System.Net.Sockets.TcpClient();
+                // Connect with timeout
+                await client.ConnectAsync("127.0.0.1", ServerPort, cts.Token);
+                
+                using var stream = client.GetStream();
+                
+                // Send
+                var data = Encoding.UTF8.GetBytes(script);
+                var header = BitConverter.GetBytes((uint)data.Length); // Little Endian
+                if (!BitConverter.IsLittleEndian) Array.Reverse(header);
+                
+                await stream.WriteAsync(header, cts.Token);
+                await stream.WriteAsync(data, cts.Token);
+                
+                // Receive Response Header
+                var respHeader = new byte[4];
+                await stream.ReadExactlyAsync(respHeader, cts.Token);
+                var respLen = BitConverter.ToUInt32(respHeader);
+                if (!BitConverter.IsLittleEndian) 
+                {
+                    // Note: Manually swap if needed
+                }
+                
+                var respBuffer = new byte[respLen];
+                await stream.ReadExactlyAsync(respBuffer, cts.Token);
+                var response = Encoding.UTF8.GetString(respBuffer);
+                
+                return response;
             }
-            
-            var respBuffer = new byte[respLen];
-            await stream.ReadExactlyAsync(respBuffer);
-            var response = Encoding.UTF8.GetString(respBuffer);
-            
-            return response;
+            catch (OperationCanceledException)
+            {
+                _consoleService.Log($"Render Preview Timeout (Attempt {retry + 1}/{maxRetries + 1}). Restarting Blender Service...");
+                Shutdown();
+                if (retry < maxRetries) await InitializeAsync();
+            }
+            catch (Exception ex)
+            {
+                _consoleService.Log($"Socket Error: {ex.Message} (Attempt {retry + 1}/{maxRetries + 1}). Restarting Blender Service...");
+                Shutdown();
+                if (retry < maxRetries) await InitializeAsync();
+            }
         }
-        catch (Exception ex)
-        {
-            return $"Socket Error: {ex.Message}";
-        }
+
+        return "Error: Render Preview Failed after retries.";
     }
 
     private string GeneratePythonScript(IEnumerable<SceneObject> objects, WorldSettings world, string outputFile, int frameEnd, string format, bool isPreview, VideoExportSettings? videoSettings = null)
@@ -219,15 +255,67 @@ public class RenderService : IRenderService, IDisposable
         {
             sb.AppendLine($"    bg_node.inputs[1].default_value = {world.Strength}"); // Strength
             
-            // Color
-            if (!string.IsNullOrEmpty(world.BackgroundColor) && world.BackgroundColor.StartsWith("#") && world.BackgroundColor.Length >= 7)
+            if (world.EnvironmentType == EnvironmentType.SolidColor)
             {
-                try {
-                    var r = Convert.ToInt32(world.BackgroundColor.Substring(1, 2), 16) / 255.0f;
-                    var g = Convert.ToInt32(world.BackgroundColor.Substring(3, 2), 16) / 255.0f;
-                    var b = Convert.ToInt32(world.BackgroundColor.Substring(5, 2), 16) / 255.0f;
-                    sb.AppendLine($"    bg_node.inputs[0].default_value = ({r}, {g}, {b}, 1)");
-                } catch {}
+                // Color
+                if (!string.IsNullOrEmpty(world.BackgroundColor) && world.BackgroundColor.StartsWith("#") && world.BackgroundColor.Length >= 7)
+                {
+                    try {
+                        var r = Convert.ToInt32(world.BackgroundColor.Substring(1, 2), 16) / 255.0f;
+                        var g = Convert.ToInt32(world.BackgroundColor.Substring(3, 2), 16) / 255.0f;
+                        var b = Convert.ToInt32(world.BackgroundColor.Substring(5, 2), 16) / 255.0f;
+                        sb.AppendLine($"    bg_node.inputs[0].default_value = ({r}, {g}, {b}, 1)");
+                    } catch {}
+                }
+            }
+            else if ((world.EnvironmentType == EnvironmentType.StudioPreset || world.EnvironmentType == EnvironmentType.CustomImage) 
+                     && !string.IsNullOrEmpty(world.EnvironmentTexturePath))
+            {
+                var texPath = world.EnvironmentTexturePath.Replace("\\", "/");
+                sb.AppendLine($"    tex_node = world.node_tree.nodes.new(type='ShaderNodeTexEnvironment')");
+                sb.AppendLine($"    try:");
+                sb.AppendLine($"        tex_node.image = bpy.data.images.load('{texPath}')");
+                
+                if (world.ShowEnvironmentBackground)
+                {
+                    sb.AppendLine($"        world.node_tree.links.new(tex_node.outputs[0], bg_node.inputs[0])");
+                }
+                else
+                {
+                    // Mix Shader Setup for Transparent/Solid Background while keeping HDRI lighting
+                    sb.AppendLine($"        # Mix Shader for invisible background");
+                    sb.AppendLine($"        mix_node = world.node_tree.nodes.new(type='ShaderNodeMixShader')");
+                    sb.AppendLine($"        path_node = world.node_tree.nodes.new(type='ShaderNodeLightPath')");
+                    sb.AppendLine($"        solid_bg_node = world.node_tree.nodes.new(type='ShaderNodeBackground')");
+                    
+                    // Set Solid Color for Camera Rays
+                    if (!string.IsNullOrEmpty(world.BackgroundColor) && world.BackgroundColor.StartsWith("#") && world.BackgroundColor.Length >= 7)
+                    {
+                        try {
+                            var r = Convert.ToInt32(world.BackgroundColor.Substring(1, 2), 16) / 255.0f;
+                            var g = Convert.ToInt32(world.BackgroundColor.Substring(3, 2), 16) / 255.0f;
+                            var b = Convert.ToInt32(world.BackgroundColor.Substring(5, 2), 16) / 255.0f;
+                            sb.AppendLine($"        solid_bg_node.inputs[0].default_value = ({r}, {g}, {b}, 1)");
+                        } catch {}
+                    }
+                    sb.AppendLine($"        solid_bg_node.inputs[1].default_value = {world.Strength}");
+
+                    // Connect Nodes
+                    // Input 1 (Factor 0): HDRI Background (Lighting)
+                    sb.AppendLine($"        world.node_tree.links.new(tex_node.outputs[0], bg_node.inputs[0])");
+                    sb.AppendLine($"        world.node_tree.links.new(bg_node.outputs[0], mix_node.inputs[1])");
+                    
+                    // Input 2 (Factor 1): Solid Background (Camera Ray)
+                    sb.AppendLine($"        world.node_tree.links.new(solid_bg_node.outputs[0], mix_node.inputs[2])");
+                    
+                    // Factor: Is Camera Ray
+                    sb.AppendLine($"        world.node_tree.links.new(path_node.outputs['Is Camera Ray'], mix_node.inputs[0])");
+                    
+                    // Output
+                    sb.AppendLine($"        world.node_tree.links.new(mix_node.outputs[0], out_node.inputs[0])");
+                }
+
+                sb.AppendLine($"    except Exception as e: print(f'Failed to load environment texture: {{e}}')");
             }
         }
 
@@ -309,6 +397,11 @@ public class RenderService : IRenderService, IDisposable
                             sb.AppendLine("    obj.animation_data.action = bpy.data.actions.new(name='RotationAction')");
                             
                             sb.AppendLine($"    frames = {frameEnd}");
+                            string axisIndex = rotateMod.Axis == "Y" ? "1" : (rotateMod.Axis == "X" ? "0" : "2");
+                            
+                            // Capture initial rotation for this axis to ensure relative rotation
+                            sb.AppendLine($"    start_angle = obj.rotation_euler[{axisIndex}]");
+                            
                             sb.AppendLine("    for f in range(frames + 1):");
                             
                             // Calculate angle based on Speed (Degrees/Second) and configured FPS
@@ -317,11 +410,10 @@ public class RenderService : IRenderService, IDisposable
                             // Angle = t * Speed = (f / fps) * Speed
                             // The key is to ensure fpsVal matches the render FPS exactly
                             double fpsVal = videoSettings.FrameRate > 0 ? videoSettings.FrameRate : 30.0;
-                            string axisIndex = rotateMod.Axis == "Y" ? "1" : (rotateMod.Axis == "X" ? "0" : "2");
                             // Use consistent floating point division
                             sb.AppendLine($"        t = float(f) / float({fpsVal})");
-                            sb.AppendLine($"        angle = t * {rotateMod.Speed} * (math.pi / 180.0)");
-                            sb.AppendLine($"        obj.rotation_euler[{axisIndex}] += angle");
+                            sb.AppendLine($"        angle_delta = t * {rotateMod.Speed} * (math.pi / 180.0)");
+                            sb.AppendLine($"        obj.rotation_euler[{axisIndex}] = start_angle + angle_delta");
                             sb.AppendLine($"        obj.keyframe_insert(data_path='rotation_euler', index={axisIndex}, frame=f)");
                         }
                     }
@@ -532,40 +624,55 @@ public class RenderService : IRenderService, IDisposable
 import bpy
 import socket
 import struct
+import sys
 
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.bind(('127.0.0.1', {ServerPort}))
-server.listen(1)
-print('Blender Server Listening on {ServerPort}')
+# Flush stdout to ensure logs are captured immediately
+sys.stdout.reconfigure(line_buffering=True)
 
-while True:
-    try:
-        client, addr = server.accept()
-        header = client.recv(4)
-        if not header:
-            client.close()
-            continue
-            
-        size = struct.unpack('<I', header)[0]
-        data = b''
-        while len(data) < size:
-            packet = client.recv(4096)
-            if not packet: break
-            data += packet
-            
-        script = data.decode('utf-8')
-        response = 'OK'
+try:
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind(('127.0.0.1', {ServerPort}))
+    server.listen(1)
+    print('Blender Server Listening on {ServerPort}')
+
+    while True:
+        client = None
         try:
-            exec(script)
+            client, addr = server.accept()
+            header = client.recv(4)
+            if not header:
+                client.close()
+                continue
+                
+            size = struct.unpack('<I', header)[0]
+            data = b''
+            while len(data) < size:
+                packet = client.recv(4096)
+                if not packet: break
+                data += packet
+                
+            script = data.decode('utf-8')
+            response = 'OK'
+            try:
+                # Execute the script
+                # Note: This runs in the main thread and blocks
+                exec(script)
+            except Exception as e:
+                response = str(e)
+                print(f'Script Error: {{e}}')
+                
+            resp_data = response.encode('utf-8')
+            client.send(struct.pack('<I', len(resp_data)))
+            client.send(resp_data)
         except Exception as e:
-            response = str(e)
-            
-        resp_data = response.encode('utf-8')
-        client.send(struct.pack('<I', len(resp_data)))
-        client.send(resp_data)
-        client.close()
-    except Exception as e:
-        print(e)
+            print(f'Server Loop Error: {{e}}')
+        finally:
+            if client:
+                try: client.close()
+                except: pass
+except Exception as main_e:
+    print(f'Critical Server Error: {{main_e}}')
 ";
 
         await File.WriteAllTextAsync(scriptPath, pyScript);
