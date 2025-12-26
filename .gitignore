@@ -10,6 +10,7 @@ obj/
 # IDE files
 .vscode/
 .idea/
+.trae/
 *.suo
 *.ntvs*
 *.njsproj

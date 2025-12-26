@@ -6,8 +6,8 @@
         mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="720"
         x:Class="AutoRenderer.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
-        Title="AutoRenderer"
+        Icon="/Assets/app-icon.ico"
+        Title="Sharkview"
         Width="1280" Height="720"
         Background="{DynamicResource AppBackgroundBrush}"
         TransparencyLevelHint="Mica, AcrylicBlur"
@@ -23,8 +23,8 @@
             <Grid>
                 <!-- Logo / Title (Left) -->
                 <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Left" IsHitTestVisible="False">
-                     <Image Source="/Assets/avalonia-logo.ico" Width="20" Height="20" VerticalAlignment="Center"/>
-                     <TextBlock Text="AutoRenderer" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                     <Image Source="/Assets/app-icon.ico" Width="48" Height="48" VerticalAlignment="Center"/>
+                     <TextBlock Text="Sharkview" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"/>
                 </StackPanel>
                 
                 <!-- Navigation Tabs (Center) -->

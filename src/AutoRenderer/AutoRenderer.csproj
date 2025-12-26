@@ -2,14 +2,29 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0</TargetFramework>
+    <AssemblyName>Sharkview</AssemblyName>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <SelfContained>true</SelfContained>
+    <ApplicationIcon>Assets\app-icon.ico</ApplicationIcon>
+    
+    <!-- Optimization Settings -->
     <PublishAot>false</PublishAot>
     <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>link</TrimMode>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <!-- <DebuggerSupport>false</DebuggerSupport> Removed to allow debugging -->
+    <DebugType>portable</DebugType>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
+
+  <!-- Prevent trimming of the main assembly to fix ViewLocator reflection issues -->
+  <ItemGroup>
+    <TrimmerRootAssembly Include="Sharkview" />
+  </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Models\" />
