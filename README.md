@@ -1,3 +1,7 @@
+<div style="text-align: center;">
+<img src="src/AutoRenderer/Assets/app-icon.ico" alt="App Icon" style="width: 20%;">
+</div>
+
 # Sharkview
 
 A modern, cross-platform automated rendering tool built with **C#** and **Avalonia UI**, designed to orchestrate **Blender** for rendering scenes and generating videos programmatically.
